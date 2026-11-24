@@ -9,9 +9,9 @@ For game version 2.5.
 ### Published build
 - Untracking calls Keep Tracked Quest's `ToggleByKey` only inside a protected call. If the function is missing (it exists only in a locally patched copy of that mod) or fails, the quest is untracked through the game's journal. The build installed on the author's PC calls `ToggleByKey` without this guard.
 
-Not run in game. Mock test: 129 of 129.
+In use in the author's game and working (installed build); no written test record. Mock test: 129 of 129.
 
 ## 1.0.0 - 2026-11-23
 - First version: the window with tabs, counts, search, sort by last update or distance, details pane, tracking and untracking.
 
-Not run in game. Mock test: 129 of 129.
+No written test record. Mock test: 129 of 129.

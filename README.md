@@ -1,7 +1,7 @@
 # Quest Picker
 
 A Cyber Engine Tweaks window, styled after the 2.5 journal, for choosing the tracked quest without opening the pause menu, for Cyberpunk 2077. Single-player only.
-Version 1.0.1 | For game version 2.5 | Status: not run in game yet; the offline mock test passes (129 of 129 checks)
+Version 1.0.1 | For game version 2.5 | Status: in use in my game and working; no written test record; the offline mock test passes (129 of 129 checks)
 
 > This is an unofficial fan work and is not approved/endorsed by CD PROJEKT RED. No game files are included.
 
@@ -64,7 +64,8 @@ The selected tab and the sort order (last update or nearest) are remembered in `
 
 | What | Result |
 |---|---|
-| In game, 1.0.0 and 1.0.1 | Not run in game. |
+| In game, 1.0.0 | No written test record. |
+| In game, 1.0.1 | In use in the author's game and working (author's statement, 2026-11-24). No written test record. The author's game runs the installed build, which differs from the published one in the untracking call (see Engineering notes). |
 | Mock test | 129 of 129 checks pass with LuaJIT, on 1.0.1 and on this published build. The test replaces CET, ImGui and the journal with stubs and checks tabs, counts, search, sort, details, tracking, untracking, config, error handling and the ImGui push/pop balance every frame. It runs in CI. |
 | Lua syntax | LuaJIT compiles the file. |
 
@@ -80,7 +81,7 @@ The stock Keep Tracked Quest case (without the patched function) was checked wit
 ## Known issues
 
 - The version string inside `init.lua` reads 1.0.0 (written to the CET log at start); the file is 1.0.1.
-- The journal calls follow the 2.5 game scripts and have not been tried in game. A failing call shows a red line in the window and one line in the mod's log; the game keeps running.
+- The journal calls follow the 2.5 game scripts; there is no written record of them being tried in game. A failing call shows a red line in the window and one line in the mod's log; the game keeps running.
 
 ## Engineering notes
 
