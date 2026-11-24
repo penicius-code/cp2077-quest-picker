@@ -3,6 +3,8 @@
 A Cyber Engine Tweaks window, styled after the 2.5 journal, for choosing the tracked quest without opening the pause menu, for Cyberpunk 2077. Single-player only.
 Version 1.0.1 | For game version 2.5 | Status: in use in my game and working; no written test record; the offline mock test passes (129 of 129 checks)
 
+**Download:** [latest release](https://github.com/penicius-code/cp2077-quest-picker/releases/latest) (zip; install steps below)
+
 > This is an unofficial fan work and is not approved/endorsed by CD PROJEKT RED. No game files are included.
 
 <img src="docs/media/quest-picker.png" width="480" alt="The Quest Picker window with quest counters, a search box and a list of quests with their current objectives and distances">
@@ -47,7 +49,7 @@ No other mod is needed. Requirements are not bundled.
 ## Install
 
 1. Install the requirements above.
-2. Copy the contents of `package/` into the game folder, so that `bin\x64\plugins\cyber_engine_tweaks\mods\CyberslopQuestPicker\init.lua` exists.
+2. Download the zip from the [latest release](https://github.com/penicius-code/cp2077-quest-picker/releases/latest) (the same files as `package/` in this repository) and extract it into the game folder, so that `bin\x64\plugins\cyber_engine_tweaks\mods\CyberslopQuestPicker\init.lua` exists.
 3. Start the game, load a save and open the CET overlay. The "Quest Picker" window lists your active quests. In the main menu it says "Load a save to see your quests."
 
 ## Uninstall / roll back
