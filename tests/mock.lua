@@ -1,4 +1,4 @@
--- Mock test for Cyberslop Quest Picker (run: luajit mock.lua <path to init.lua>, cwd = a temp dir)
+-- Mock test for Cyberslop Quest Picker 1.1.0 (run: luajit mock.lua <path to init.lua>, cwd = a temp dir)
 local MOD = arg[1] or "mod/init.lua"
 
 local pass, fail = 0, 0
@@ -135,12 +135,42 @@ function KTQ:BeginPlayerAction() CALLS[#CALLS + 1] = "begin" end
 function KTQ:EndPlayerAction() CALLS[#CALLS + 1] = "end" end
 function KTQ:ToggleByKey() CALLS[#CALLS + 1] = "toggle"; J.tracked = nil; return true end
 local ktqPresent = true
-local PLAYER = { PlaySoundEvent = function(self, n) CALLS[#CALLS + 1] = "sound:" .. n end }
+-- time skip state (1.1.0)
+local TSM = { days = 3, h = 21, m = 4, can = true, ints = { Combat = 0, Swimming = 0, Vehicle = 0, HighLevel = 0 },
+    bools = {}, tags = {}, speed = 0, zone = 1, phone = false, chase = false, hw = false, auto = false,
+    dil = false, failCan = false }
+local PSM = {
+    GetInt = function(self, k) return TSM.ints[k] or 0 end,
+    GetBool = function(self, k) return TSM.bools[k] or false end,
+    GetVariant = function(self, k) return { securityAreaType = TSM.zone } end,
+}
+function GetAllBlackboardDefs() return { PlayerStateMachine = setmetatable({}, { __index = function(t, k) return k end }) } end
+function FromVariant(v) return v end
+function EnumInt(e) return e end
+StatusEffectSystem = { ObjectHasStatusEffectWithTag = function(p, tag) return TSM.tags[tag] or false end }
+HubMenuUtility = { IsPlayerHardwareDisabled = function(p) return TSM.hw end }
+GameTimeUtils = { CanPlayerTimeSkip = function(p)
+    if TSM.failCan then error("no such function") end
+    return TSM.can
+end }
+local PLAYER = { PlaySoundEvent = function(self, n) CALLS[#CALLS + 1] = "sound:" .. n end,
+    GetPlayerStateMachineBlackboard = function() return PSM end,
+    IsMovingVertically = function() return false end,
+    GetMountedVehicle = function() return { GetCurrentSpeed = function() return TSM.speed end } end,
+    GetPreventionSystem = function() return { IsChasingPlayer = function() return TSM.chase end } end,
+}
 local inGame = true
 Game = {
     GetJournalManager = function() return J end,
     GetPlayer = function() return inGame and PLAYER or nil end,
+    GetTimeSystem = function() return {
+        GetGameTime = function() return { Days = function() return TSM.days end, Hours = function() return TSM.h end,
+            Minutes = function() return TSM.m end } end,
+        IsTimeDilationActive = function(self, r) assert(r == nil, "dilation reason"); return TSM.dil end,
+    } end,
+    GetPhoneManager = function() return { IsPhoneCallActive = function() return TSM.phone end } end,
     GetScriptableSystemsContainer = function() return { Get = function(self, name)
+        if name == "AutoDriveSystem" then return { GetAutodriveEnabled = function() return TSM.auto end } end
         assert(name == "KeepTrackedQuest.KeepTrackedQuestSystem", "KTQ name")
         return ktqPresent and KTQ or nil
     end } end,
@@ -480,6 +510,58 @@ ok(J.reads > reads0, "T16 expanded: journal read again")
 IN.availW = 560
 f = frame()
 ok(#f.rows > 0, "T16 rows back")
+
+-- T17 time skip line (1.1.0)
+local function tsLine()
+    NOW = NOW + 2
+    local fr = frame()
+    local clock, st = nil, nil
+    for _, x in ipairs(fr.colored) do
+        if x:find("^DAY ") then clock = x end
+        if x:find("^TIME SKIP") then st = x end
+    end
+    return clock, st
+end
+local c, st = tsLine()
+ok(c == "DAY 4  21:04", "T17 clock (" .. tostring(c) .. ")")
+ok(st == "TIME SKIP AVAILABLE", "T17 available (" .. tostring(st) .. ")")
+TSM.can = false; TSM.ints.Combat = 1
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: IN COMBAT", "T17 combat (" .. tostring(st) .. ")")
+TSM.ints.Combat = 0; TSM.ints.Vehicle = 1; TSM.speed = 20
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: DRIVING FASTER THAN 50 KM/H", "T17 speed (" .. tostring(st) .. ")")
+TSM.speed = -20
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: BLOCKED BY A QUEST OR MOD", "T17 unknown reason (" .. tostring(st) .. ")")
+TSM.ints.Vehicle = 0; TSM.zone = 3
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: RESTRICTED OR DANGEROUS AREA", "T17 zone (" .. tostring(st) .. ")")
+TSM.zone = 1; TSM.tags.NoTimeSkip = true
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: A QUEST OR EFFECT FORBIDS IT", "T17 tag (" .. tostring(st) .. ")")
+TSM.tags.NoTimeSkip = nil; TSM.can = true; TSM.bools.IsPlayerInsideElevator = true
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: IN AN ELEVATOR", "T17 elevator (" .. tostring(st) .. ")")
+TSM.bools.IsPlayerInsideElevator = nil; TSM.dil = true
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: TIME IS SLOWED", "T17 dilation (" .. tostring(st) .. ")")
+TSM.dil = false; TSM.failCan = true; TSM.auto = true
+c, st = tsLine()
+ok(st == "TIME SKIP BLOCKED: AUTODRIVE ON", "T17 own check when the game call fails (" .. tostring(st) .. ")")
+TSM.auto = false
+c, st = tsLine()
+ok(st == "TIME SKIP AVAILABLE", "T17 own check: free (" .. tostring(st) .. ")")
+TSM.failCan = false; TSM.tags.NoTimeDisplay = true
+c, st = tsLine()
+ok(c == "DAY --  --:--", "T17 glitched clock (" .. tostring(c) .. ")")
+TSM.tags.NoTimeDisplay = nil
+inGame = false
+c, st = tsLine()
+ok(c == nil and st == nil, "T17 no line in the main menu")
+inGame = true
+c, st = tsLine()
+ok(c ~= nil and #logs > 0, "T17 back in game")
 
 ok(errs() == 1, "no unexpected errors (" .. errs() .. ")")
 for _, l in ipairs(logs) do if l:find("error") and not l:find("journal exploded") then io.stdout:write("LOG: " .. l .. "\n") end end

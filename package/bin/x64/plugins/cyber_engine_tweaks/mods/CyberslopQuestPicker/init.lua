@@ -1,4 +1,7 @@
--- Cyberslop Quest Picker 1.0.1 (2026-11-23)
+-- Cyberslop Quest Picker 1.1.0 (2026-11-26)
+-- 1.1.0: time skip line under the header, like the pause menu journal: game day + clock, and whether time skip
+--        is possible right now (GameTimeUtils.CanPlayerTimeSkip as the game has it, plus Immersive Timeskip's
+--        elevator / slowed-time checks); when it is blocked, the reason. Read with the journal every 1.5 s.
 -- 1.0.1: TRACK / UNTRACK pop their button colours before they call the game, so an error there can't leave
 --        colours pushed on every CET window.
 -- Pick the tracked quest from a CET window instead of the pause menu journal. Same lists as the 2.5 journal
@@ -13,7 +16,7 @@
 -- active quests re-read every 1.5 s, finished quests once per overlay open, texts cached per journal entry, only
 -- the rows inside the scroll view are drawn.
 
-local VERSION = "1.0.0"
+local VERSION = "1.1.0"
 local KTQ_SYS = "KeepTrackedQuest.KeepTrackedQuestSystem"
 local CONFIG = "config.json"
 local REFRESH = 1.5      -- s between quest reads while the overlay is open
@@ -79,6 +82,7 @@ local S = {
     selected = nil, det = nil, trackedQuest = 0, trackedObj = 0, hoverObj = 0, lastToggle = 0,
     txtDone = nil, txtFailed = nil, txtOptional = nil, tsMode = nil, sortW = nil, chipW = { 0, 0, 0, 0 },
     shown = true, pendingSel = nil, pendingAt = 0,
+    tsClock = nil, tsCan = nil, tsWhy = nil, -- time skip line: "DAY 4  21:34", true / false, block reason
 }
 local textCache, optCache, counterCache, distCache, rowIds = {}, {}, {}, {}, {}
 local F = nil       -- journal state filters, made on first use
@@ -413,10 +417,103 @@ local function readDetails(j)
     S.det = d
 end
 
+-- ---------------------------------------------------------------- time skip line
+
+local function try(f, ...)
+    local ok, v = pcall(f, ...)
+    if ok then return v end
+    return nil
+end
+
+-- the block reasons of GameTimeUtils.CanPlayerTimeSkip (2.5 timeSkip.swift), in its order; its IsPausedState
+-- check reads an unset TimeSystem there, so it never blocks and is left out
+local function blockReason(p, psm, D)
+    if try(function() return psm:GetInt(D.Combat) end) == 1 then return "in combat" end
+    if try(function() return StatusEffectSystem.ObjectHasStatusEffectWithTag(p, "NoTimeSkip") end) then
+        return "a quest or effect forbids it"
+    end
+    if try(function() return p:IsMovingVertically() end) then return "jumping or falling" end
+    if try(function() return psm:GetInt(D.Swimming) end) == 2 then return "diving" end
+    local veh = try(function() return psm:GetInt(D.Vehicle) end)
+    if veh == 4 then return "getting in or out of a vehicle" end
+    if veh == 1 then
+        local sp = try(function() return p:GetMountedVehicle():GetCurrentSpeed() end)
+        if sp and sp > 13.8 then return "driving faster than 50 km/h" end
+    end
+    local tier = try(function() return psm:GetInt(D.HighLevel) end)
+    if tier and tier >= 3 and tier <= 5 then return "in a scene" end
+    local zone = try(function() return FromVariant(psm:GetVariant(D.SecurityZoneData)) end)
+    if zone then
+        local t = try(function() return EnumInt(zone.securityAreaType) end)
+        if t and t > 1 then return "restricted or dangerous area" end
+    end
+    if try(function() return Game.GetPhoneManager():IsPhoneCallActive() end) then return "phone call" end
+    if try(function() return psm:GetBool(D.Carrying) end) then return "carrying a body" end
+    if try(function() return psm:GetBool(D.IsInLoreAnimationScene) end) then return "in a scene" end
+    if try(function() return p:GetPreventionSystem():IsChasingPlayer() end) then return "police chase" end
+    if try(function() return HubMenuUtility.IsPlayerHardwareDisabled(p) end) then return "hardware disabled" end
+    if try(function()
+        return Game.GetScriptableSystemsContainer():Get("AutoDriveSystem"):GetAutodriveEnabled()
+    end) then return "autodrive on" end
+    return nil
+end
+
+local function readTimeSkip(p)
+    local ts = Game.GetTimeSystem()
+    local psm = p:GetPlayerStateMachineBlackboard()
+    local D = GetAllBlackboardDefs().PlayerStateMachine
+    if try(function() return StatusEffectSystem.ObjectHasStatusEffectWithTag(p, "NoTimeDisplay") end) then
+        S.tsClock = "DAY --  --:--"
+    else
+        local gt = ts:GetGameTime()
+        S.tsClock = string.format("DAY %d  %02d:%02d", gt:Days() + 1, gt:Hours(), gt:Minutes())
+    end
+    -- the game's own verdict, with every mod wrap of it (auto drive enhanced replaces it)
+    local can = try(function() return GameTimeUtils.CanPlayerTimeSkip(p) end)
+    local why = blockReason(p, psm, D)
+    if can == nil then can = why == nil end
+    -- Immersive Timeskip (O hold) also refuses in elevators and while time is slowed
+    if can then
+        if try(function() return psm:GetBool(D.IsPlayerInsideElevator) end) then
+            can, why = false, "in an elevator"
+        elseif try(function() return ts:IsTimeDilationActive() end) then
+            can, why = false, "time is slowed"
+        end
+    end
+    S.tsCan = can
+    S.tsWhy = (not can) and (why or "blocked by a quest or mod") or nil
+end
+
+local function drawTimeSkip()
+    if not S.tsClock then return end
+    ImGui.TextColored(0.94, 0.89, 0.38, 1, S.tsClock)
+    ImGui.SameLine(0, 14)
+    if S.tsCan then
+        ImGui.TextColored(0.24, 0.81, 0.47, 1, "TIME SKIP AVAILABLE")
+    else
+        ImGui.TextColored(1, 0.31, 0.28, 1, "TIME SKIP BLOCKED: " .. string.upper(S.tsWhy or "?"))
+    end
+    if ImGui.IsItemHovered() then
+        ImGui.SetTooltip("Same check as the pause menu's Skip Time, plus Immersive Timeskip's (hold O).")
+    end
+end
+
 local function refresh(now)
     S.nextRefresh = now + REFRESH
     local player = Game.GetPlayer()
     S.inGame = valid(player)
+    if S.inGame then
+        local ok, err = pcall(readTimeSkip, player)
+        if not ok then
+            S.tsClock = nil
+            if S.lastErr ~= tostring(err) then
+                S.lastErr = tostring(err)
+                logLine("time skip read error: " .. S.lastErr)
+            end
+        end
+    else
+        S.tsClock = nil
+    end
     if not S.inGame then
         S.active, S.done, S.det = {}, {}, nil
         S.counts[1], S.counts[2], S.counts[3], S.counts[4] = 0, 0, 0, 0
@@ -929,6 +1026,7 @@ local function drawBody()
     local lineH = ImGui.GetTextLineHeight()
     local chipH = math.floor(lineH + 14)
     drawHeader(dl, lineH, chipH)
+    drawTimeSkip()
     if S.errMsg then ImGui.TextColored(1, 0.35, 0.3, 1, S.errMsg) end
     if S.viewDirty then buildView() end
     ImGui.Spacing()

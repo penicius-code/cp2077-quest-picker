@@ -1,7 +1,7 @@
 # Quest Picker
 
 A Cyber Engine Tweaks window, styled after the 2.5 journal, for choosing the tracked quest without opening the pause menu, for Cyberpunk 2077. Single-player only.
-Version 1.0.1 | For game version 2.5 | Status: in use in my game and working; no written test record; the offline mock test passes (129 of 129 checks)
+Version 1.1.0 | For game version 2.5 | Status: 1.0.1 in use in my game and working; 1.1.0 (time skip line) not run in game yet; no written test record; the offline mock test passes (156 of 156 checks)
 
 **Download:** [latest release](https://github.com/penicius-code/cp2077-quest-picker/releases/latest) (zip; install steps below)
 
@@ -15,7 +15,7 @@ Switching the tracked quest means pausing, opening the journal, finding the righ
 
 ## What I built
 
-A CET window with the same lists as the journal: tabs with counts, search, sort by last update or by distance, and a details pane. A click on the pin box tracks or untracks a quest. It changes: which quest and objective the game tracks, through the game's own journal functions. 1,031 lines of Lua, no redscript.
+A CET window with the same lists as the journal: tabs with counts, search, sort by last update or by distance, and a details pane. A line under the header shows the game day and clock and whether time skip is possible right now, and why not when it is blocked. A click on the pin box tracks or untracks a quest. It changes: which quest and objective the game tracks, through the game's own journal functions. 1,031 lines of Lua, no redscript.
 
 **This published build differs from the one installed on the author's PC in one point.** The installed build untracks through a function that exists only in a locally patched copy of the Keep Tracked Quest mod. Here that call is guarded: if the function is missing or fails, the quest is untracked through the game's journal instead, as it already was without Keep Tracked Quest. With an unpatched Keep Tracked Quest the installed build raised an error at the UNTRACK button; this build does not.
 
@@ -31,7 +31,7 @@ A CET window with the same lists as the journal: tabs with counts, search, sort 
 ```text
 package/
   bin/x64/plugins/cyber_engine_tweaks/mods/CyberslopQuestPicker/init.lua
-tests/mock.lua    runs the Lua against a stubbed game API (129 checks)
+tests/mock.lua    runs the Lua against a stubbed game API (156 checks)
 ```
 
 Run the test from an empty folder, because it writes the mod's settings file into the current folder: `luajit <repo>/tests/mock.lua <repo>/package/bin/x64/plugins/cyber_engine_tweaks/mods/<mod folder>/init.lua`.
@@ -68,7 +68,8 @@ The selected tab and the sort order (last update or nearest) are remembered in `
 |---|---|
 | In game, 1.0.0 | No written test record. |
 | In game, 1.0.1 | In use in the author's game and working (author's statement, 2026-11-24). No written test record. The author's game runs the installed build, which differs from the published one in the untracking call (see Engineering notes). |
-| Mock test | 129 of 129 checks pass with LuaJIT, on 1.0.1 and on this published build. The test replaces CET, ImGui and the journal with stubs and checks tabs, counts, search, sort, details, tracking, untracking, config, error handling and the ImGui push/pop balance every frame. It runs in CI. |
+| In game, 1.1.0 | Not run in game yet. No written test record. |
+| Mock test | 156 of 156 checks pass with LuaJIT on this published 1.1.0 build (1.0.1: 129 of 129), also in CI. The test replaces CET, ImGui and the journal with stubs and checks tabs, counts, search, sort, details, tracking, untracking, config, error handling and the ImGui push/pop balance every frame. It runs in CI. |
 | Lua syntax | LuaJIT compiles the file. |
 
 The stock Keep Tracked Quest case (without the patched function) was checked with a variant of the mock test that is not part of this repository: the published build untracks through the journal without an error; the installed build raised "attempt to call method 'ToggleByKey' (a nil value)".
@@ -101,7 +102,7 @@ The stock Keep Tracked Quest case (without the patched function) was checked wit
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md). Latest: 1.0.1 (2026-11-23), published with the untrack fallback.
+See [CHANGELOG.md](CHANGELOG.md). Latest: 1.1.0 (2026-11-26): a time skip line under the header shows the game day and clock and whether time skip is possible now, with the reason when it is blocked.
 
 ## Credits and licence
 
