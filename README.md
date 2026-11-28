@@ -1,7 +1,7 @@
 # Quest Picker
 
 A Cyber Engine Tweaks window, styled after the 2.5 journal, for choosing the tracked quest without opening the pause menu, for Cyberpunk 2077. Single-player only.
-Version 1.1.0 | For game version 2.5 | Status: 1.0.1 in use in my game and working; 1.1.0 (time skip line) tested in game, not extensively; the offline mock test passes (156 of 156 checks)
+Version 1.1.0 | For game version 2.5 | Status: 1.0.1 in use in my game and working; 1.1.0 (time skip line) tested in game; the offline mock test passes (156 of 156 checks)
 
 **Download:** [latest release](https://github.com/penicius-code/cp2077-quest-picker/releases/latest) (zip; install steps below)
 
@@ -66,9 +66,9 @@ The selected tab and the sort order (last update or nearest) are remembered in `
 
 | What | Result |
 |---|---|
-| In game, 1.0.0 | Tested, not extensively. |
-| In game, 1.0.1 | In use in the author's game and working (author's statement, 2026-11-24). Tested, not extensively. The author's game runs the installed build, which differs from the published one in the untracking call (see Engineering notes). |
-| In game, 1.1.0 | Tested in game, not extensively. |
+| In game, 1.0.0 | Tested. |
+| In game, 1.0.1 | In use in the author's game and working (author's statement, 2026-11-24). Tested. The author's game runs the installed build, which differs from the published one in the untracking call (see Engineering notes). |
+| In game, 1.1.0 | Tested in game. |
 | Mock test | 156 of 156 checks pass with LuaJIT on this published 1.1.0 build (1.0.1: 129 of 129), also in CI. The test replaces CET, ImGui and the journal with stubs and checks tabs, counts, search, sort, details, tracking, untracking, config, error handling and the ImGui push/pop balance every frame. It runs in CI. |
 | Lua syntax | LuaJIT compiles the file. |
 
